@@ -1,0 +1,12 @@
+# smtp account configuration for default
+account default
+logfile /var/log/php/msmtp.log
+host host
+port 25
+from email-from
+keepbcc on
+auth on
+user login
+password password
+tls on
+tls_certcheck off

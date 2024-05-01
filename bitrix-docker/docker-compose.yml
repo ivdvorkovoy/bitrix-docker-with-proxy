@@ -1,0 +1,125 @@
+version: '3.8'
+
+networks:
+  nginx-proxy:
+    driver: bridge
+    name: proxy_net
+    external: true
+  bitrix:
+    driver: bridge
+
+services:
+  nginx:
+    build: ./config/nginx
+    hostname: ${COMPOSE_PROJECT_NAME}_nginx
+    container_name: ${COMPOSE_PROJECT_NAME}_nginx
+    depends_on:
+      - php
+    volumes:
+      - ./web:/web
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./config/nginx/bitrix.conf:/etc/nginx/bitrix.conf:ro
+      - ./config/nginx/fastcgi.conf:/etc/nginx/fastcgi.conf:ro
+      - ./config/nginx/security_headers.conf:/etc/nginx/security_headers.conf:ro
+      - ./config/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./logs/nginx:/var/log/nginx
+    environment:
+      TZ: ${TIMEZONE}
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    restart: unless-stopped
+    networks:
+      - nginx-proxy
+      - bitrix
+
+  php:
+    build: ./config/php/${PHP_VERSION}
+    depends_on:
+      - mysql
+      - memcached
+      - memcached-sessions
+    expose:
+      - "9000"
+    volumes:
+      - ./web:/web
+      - ./config/php/msmtprc.conf:/etc/msmtprc
+      - ./logs/php:/var/log/php
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    restart: unless-stopped
+    networks:
+      - bitrix
+
+  php-cron:
+    command: cron -f
+    build: ./config/php/${PHP_VERSION}
+    depends_on:
+      - mysql
+      - memcached
+      - memcached-sessions
+    volumes:
+      - ./web:/web
+      - ./config/php/msmtprc.conf:/etc/msmtprc
+      - ./config/cron/php-cron.cron:/etc/cron.d/tasks:ro
+      - ./logs/php:/var/log/php
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    restart: unless-stopped
+    networks:
+      - bitrix
+  mysql:
+    build: ./config/db/${SQL_VERSION}
+    expose:
+      - "3306"
+    ports:
+      - "3306"
+    volumes:
+      - ./private/mysql-data:/var/lib/mysql
+      - ./logs/mysql:/var/log/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: ${TIMEZONE}
+    cap_add:
+      - SYS_NICE  # CAP_SYS_NICE
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+    restart: unless-stopped
+    networks:
+      - bitrix
+
+  memcached:
+    image: memcached:1-alpine
+    restart: unless-stopped
+    networks:
+      - bitrix
+    expose:
+      - "11211"
+
+  memcached-sessions:
+    image: memcached:1-alpine
+    restart: unless-stopped
+    networks:
+      - bitrix
+    expose:
+      - "11211"

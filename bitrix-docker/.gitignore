@@ -1,0 +1,22 @@
+# temp files
+*.swp
+# logs
+*.log
+
+# sql dumps
+*.sql
+
+# backups folder
+/backup
+
+# logs folder
+/logs
+
+# web files folder
+/web
+
+# private folder
+/private
+.env
+.idea
+/config/php/msmtprc.conf

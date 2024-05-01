@@ -1,0 +1,18 @@
+version: '3'
+
+volumes:
+    letsencrypt:
+      driver: local
+
+services:
+  nginxproxy:
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./.well-known:/var/www/nginxproxy/.well-known
+    build:
+      context: .
+      args:
+        SSL_MODE: ${SSL_MODE}
+    restart: always
